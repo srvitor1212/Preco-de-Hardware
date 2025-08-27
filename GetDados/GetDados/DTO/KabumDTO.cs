@@ -2,8 +2,7 @@
 
 public class KabumDTO
 {
-    public int id { get; set; }
-    public string title { get; set; } = string.Empty;
-    public decimal price { get; set; }
-    public decimal price_with_discount { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public decimal Price { get; set; }
+    public string FriendlyName { get; set; } = string.Empty;
 }
