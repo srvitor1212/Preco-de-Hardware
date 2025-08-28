@@ -1,22 +1,23 @@
 ﻿using GetDados.DTO;
 using HtmlAgilityPack;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace GetDados.Services;
 
-public class WebScrapingService(HttpClient httpClient)
+public class WebScrapingService(
+    HttpClient httpClient,
+    string Url) : DefaultService(httpClient, Url)
 {
-    public HttpClient HttpClient { get; } = httpClient;
+    private static readonly string[] InvalidCategories = ["Hardware/Placa de vídeo (VGA)/Acessórios"];
 
     public async Task<List<KabumDTO>> Kabum()
     {
-        var URL = "https://www.kabum.com.br/hardware/placa-de-video-vga?page_number=1&page_size=20&facet_filters=eyJwcmljZSI6eyJtaW4iOjUwMCwibWF4IjoxMTc2NDcuMDV9fQ==&sort=price";
-
 
         // Faz a request que retorna um HTML
-        var request = new HttpRequestMessage(HttpMethod.Get, URL);
+        var request = new HttpRequestMessage(HttpMethod.Get, _url);
         request.Headers.Add("Cookie", "isMobile=false; isMobileDevice=false; storeCode=001");
-        var response = await HttpClient.SendAsync(request);
+        var response = await _httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
         var html = await response.Content.ReadAsStringAsync();
 
@@ -40,7 +41,11 @@ public class WebScrapingService(HttpClient httpClient)
 
 
         // Transforma o string em um JsonDocument
-        var options = new JsonSerializerOptions { WriteIndented = true };
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
         var jsonPretty = JsonSerializer.Serialize(data, options);
         string decoded = JsonSerializer.Deserialize<string>(jsonPretty)!;
         var jsonDoc = JsonDocument.Parse(decoded);
@@ -62,11 +67,28 @@ public class WebScrapingService(HttpClient httpClient)
         var productList = new List<KabumDTO>();
         foreach (var item in dataProducts.EnumerateArray())
         {
+            var category = item.GetProperty("category").GetString() ?? string.Empty;
+
+            if (InvalidCategories.Contains(category))
+                continue;
+
+            item.TryGetProperty("manufacturer", out var manufacturer);
+
             productList.Add(new KabumDTO
             {
                 Name = item.GetProperty("name").GetString() ?? string.Empty,
+                FriendlyName = item.GetProperty("friendlyName").GetString() ?? string.Empty,
+                Description = item.GetProperty("description").GetString() ?? string.Empty,
+                Category = category,
+                ManufacturerName = manufacturer.GetProperty("name").GetString() ?? string.Empty,
                 Price = item.GetProperty("price").GetDecimal(),
-                FriendlyName = item.GetProperty("friendlyName").GetString() ?? string.Empty
+                PrimePrice = item.GetProperty("primePrice").GetDecimal(),
+                PrimePriceWithDiscount = item.GetProperty("primePriceWithDiscount").GetDecimal(),
+                OldPrice = item.GetProperty("oldPrice").GetDecimal(),
+                OldPrimePrice = item.GetProperty("oldPrimePrice").GetDecimal(),
+                PriceWithDiscount = item.GetProperty("priceWithDiscount").GetDecimal(),
+                PriceMarketplace = item.GetProperty("priceMarketplace").GetDecimal(),
+                Available = item.GetProperty("available").GetBoolean(),
             });
         }
 
