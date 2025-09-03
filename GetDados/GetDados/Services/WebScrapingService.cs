@@ -2,22 +2,46 @@
 using HtmlAgilityPack;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Web;
 
 namespace GetDados.Services;
 
 public class WebScrapingService(
     HttpClient httpClient,
-    string Url) : DefaultService(httpClient, Url)
+    string Url)
 {
+    public HttpClient HttpClient { get; } = httpClient;
+    public string Url { get; set; } = Url;
+
     private static readonly string[] InvalidCategories = ["Hardware/Placa de vídeo (VGA)/Acessórios"];
+
+    private readonly JsonSerializerOptions options = new()
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
 
     public async Task<List<KabumDTO>> Kabum()
     {
+        var json = await GetJsonElement();
+
+        var pages = GetPages(json);
+
+        var kabumDto = new List<KabumDTO>();
+
+        for (var i = 1; i <= pages; i++)
+            kabumDto.AddRange(await GetProducts(i));
+
+        return kabumDto;
+    }
+
+    private async Task<JsonElement> GetJsonElement()
+    {
 
         // Faz a request que retorna um HTML
-        var request = new HttpRequestMessage(HttpMethod.Get, _url);
+        var request = new HttpRequestMessage(HttpMethod.Get, Url);
         request.Headers.Add("Cookie", "isMobile=false; isMobileDevice=false; storeCode=001");
-        var response = await _httpClient.SendAsync(request);
+        var response = await HttpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
         var html = await response.Content.ReadAsStringAsync();
 
@@ -41,11 +65,6 @@ public class WebScrapingService(
 
 
         // Transforma o string em um JsonDocument
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        };
         var jsonPretty = JsonSerializer.Serialize(data, options);
         string decoded = JsonSerializer.Deserialize<string>(jsonPretty)!;
         var jsonDoc = JsonDocument.Parse(decoded);
@@ -57,9 +76,46 @@ public class WebScrapingService(
         // Navega no JSON até chegar na parte dos produtos
         var dataElements = jsonDoc.RootElement;
         dataElements.TryGetProperty("catalogServer", out var catalogServer);
-        catalogServer.TryGetProperty("data", out var dataProducts);
+
+        return catalogServer;
+    }
+
+    private static int GetPages(JsonElement json)
+    {
+        json.TryGetProperty("meta", out var meta);
+        meta.TryGetProperty("page", out var page);
+
+        return page.GetProperty("number").GetInt32();
+    }
+
+    private void SetPage(int page)
+    {
+        var uri = new Uri(Url);
+
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+
+        queryParams["page_number"] = $"{page}";
+
+        // remonta a URL
+        var newUriBuilder = new UriBuilder(uri)
+        {
+            Query = queryParams.ToString()
+        };
+
+        var newUrl = newUriBuilder.ToString();
+        
+        Url = newUrl;
+    }
+
+    private async Task<List<KabumDTO>> GetProducts(int page)
+    {
+        break; //todo arrumar paginação
+        SetPage(page);
+        var json = await GetJsonElement();
+
+        json.TryGetProperty("data", out var dataProducts);
         // Salva um arquivo com o conteúdo até aqui
-        pretty = JsonSerializer.Serialize(dataProducts, options);
+        string pretty = JsonSerializer.Serialize(dataProducts, options);
         await File.WriteAllTextAsync("data_fixed_dataProducts.json", pretty);
 
 
