@@ -1,9 +1,9 @@
-﻿using GetDados.DTO;
+﻿using Application.DTO;
 using HtmlAgilityPack;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 
-namespace GetDados.Services;
+namespace Application.Services;
 
 public class KabumScrapingService(HttpClient httpClient, string url) : WebScrapingService(httpClient, url)
 {

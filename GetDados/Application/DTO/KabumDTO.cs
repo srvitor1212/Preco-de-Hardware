@@ -1,4 +1,4 @@
-﻿namespace GetDados.DTO;
+﻿namespace Application.DTO;
 
 public class KabumDTO
 {

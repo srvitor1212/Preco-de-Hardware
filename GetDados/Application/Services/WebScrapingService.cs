@@ -1,7 +1,7 @@
 ﻿using System.Collections.Specialized;
 using System.Web;
 
-namespace GetDados.Services;
+namespace Application.Services;
 
 public abstract class WebScrapingService
 {
