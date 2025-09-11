@@ -5,36 +5,52 @@ namespace Application.Services;
 
 public abstract class WebScrapingService
 {
-    public HttpClient HttpClient { get; private set; }
-    public string Url { get; private set; }
-    public Uri Uri { get; private set; }
+    protected HttpClient HttpClient { get; }
+    public Uri CurrentUri { get; private set; }
     public NameValueCollection QueryParams { get; private set; }
     public NameValueCollection InitialQueryParams { get; private set; }
-    public int Page { get; set; } = 1;
+    public int Page { get; private set; } = 1;
 
-    protected WebScrapingService(HttpClient httpClient, string url)
+    protected WebScrapingService(HttpClient httpClient, string baseUrl)
     {
-        HttpClient = httpClient;
-        Url = url;
-        Uri = new Uri(Url);
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            throw new ArgumentException("Base URL não pode ser nula ou vazia.", nameof(baseUrl));
 
-        HttpClient.BaseAddress = Uri;
-        QueryParams = HttpUtility.ParseQueryString(Uri!.Query);
-        InitialQueryParams = HttpUtility.ParseQueryString(Uri!.Query);
+        HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+
+        CurrentUri = new Uri(baseUrl);
+
+        HttpClient.BaseAddress = new Uri($"{CurrentUri.Scheme}://{CurrentUri.Host}");
+
+        QueryParams = HttpUtility.ParseQueryString(CurrentUri.Query);
+        InitialQueryParams = HttpUtility.ParseQueryString(CurrentUri.Query);
     }
 
-    protected void NextPage(string pageElementName)
+    protected void NextPage(string pageParamName)
     {
         Page++;
 
-        QueryParams[pageElementName] = Page.ToString();
+        QueryParams[pageParamName] = Page.ToString();
 
-        var uriBuilder = new UriBuilder(Uri)
+        var uriBuilder = new UriBuilder(CurrentUri)
         {
             Query = QueryParams.ToString()!
         };
 
-        Uri = uriBuilder.Uri;
-        Url = Uri.ToString();
+        CurrentUri = uriBuilder.Uri;
+    }
+
+    protected async Task<string> GetContentAsync()
+    {
+        var response = await HttpClient.GetAsync(CurrentUri.PathAndQuery);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync();
+    }
+
+    protected void ResetPagination()
+    {
+        Page = 1;
+        QueryParams = new NameValueCollection(InitialQueryParams);
+        CurrentUri = new UriBuilder(CurrentUri) { Query = QueryParams.ToString()! }.Uri;
     }
 }

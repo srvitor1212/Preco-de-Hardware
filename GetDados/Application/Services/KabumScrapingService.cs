@@ -1,11 +1,16 @@
 ﻿using Application.DTO;
+using Application.Services.Interfaces;
 using HtmlAgilityPack;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace Application.Services;
 
-public class KabumScrapingService(HttpClient httpClient, string url) : WebScrapingService(httpClient, url)
+public class KabumScrapingService(HttpClient httpClient)
+    : WebScrapingService(
+        httpClient, 
+        "https://www.kabum.com.br/hardware/placa-de-video-vga?page_number=1&page_size=100&facet_filters=&sort=price"), 
+    IKabumScrapingService
 {
 
     private static readonly string[] InvalidCategories = ["Hardware/Placa de vídeo (VGA)/Acessórios"];
@@ -15,6 +20,11 @@ public class KabumScrapingService(HttpClient httpClient, string url) : WebScrapi
         WriteIndented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
+
+    public async Task ExecutarAsync(CancellationToken cancellationToken)
+    {
+        await Executar();
+    }
 
     public async Task<List<KabumDTO>> Executar()
     {
@@ -80,8 +90,10 @@ public class KabumScrapingService(HttpClient httpClient, string url) : WebScrapi
     private async Task<JsonElement> GetJsonElement()
     {
 
+        var teste = await GetContentAsync();
+
         // Faz a request que retorna um HTML
-        var request = new HttpRequestMessage(HttpMethod.Get, Url);
+        var request = new HttpRequestMessage(HttpMethod.Get, "");
         request.Headers.Add("Cookie", "isMobile=false; isMobileDevice=false; storeCode=001");
         var response = await HttpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();

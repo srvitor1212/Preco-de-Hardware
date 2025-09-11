@@ -1,14 +1,21 @@
-﻿using GetDados.Services;
+﻿using Application.Jobs;
+using Application.Jobs.Interfaces;
+using Application.Services;
+using Application.Services.Interfaces;
+using Infra.Connect;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
-Console.WriteLine($"Dir={Environment.CurrentDirectory}");
+var host = Host.CreateDefaultBuilder()
+.ConfigureServices((context, services) =>
+{
+    services.AdicionarSqlite();
 
-HttpClient httpClient = new();
+    services.AddHttpClient<IKabumScrapingService, KabumScrapingService>();
+    services.AddScoped<IScrapingJob, KabumScrapingJob>();
 
-var motor = new KabumScrapingService(
-    httpClient, 
-    "https://www.kabum.com.br/hardware/placa-de-video-vga?page_number=1&page_size=100&facet_filters=&sort=price");
+    services.AddHostedService<ScrapingWorker>();
+})
+.Build();
 
-var produtosKabum = await motor.Executar();
-
-foreach(var item in produtosKabum)
-    Console.WriteLine($"{item.Name} | {item.Price}");
+await host.RunAsync();
