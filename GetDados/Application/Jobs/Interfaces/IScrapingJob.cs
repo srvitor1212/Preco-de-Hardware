@@ -3,6 +3,6 @@
 public interface IScrapingJob
 {
     string Name { get; }
-    string CronExpression { get; };
+    string CronExpression { get; }
     Task ExecutarAsync(CancellationToken stoppingToken);
 }

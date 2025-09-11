@@ -20,7 +20,7 @@ public class ScrapingWorker(
 
         _nextJob = _jobs.ToDictionary(
             job => job,
-            job => GetNextOccurrence(job.CronExpression, Now));
+            job => Now);
 
         while (!stoppingToken.IsCancellationRequested)
         {
