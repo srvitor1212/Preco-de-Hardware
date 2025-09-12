@@ -16,7 +16,7 @@ public class ScrapingWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("ScrapingWorker foi iniciado - {Datahora}", Now);
+        _logger.LogInformation("ScrapingWorker foi iniciado.");
 
         _nextJob = _jobs.ToDictionary(
             job => job,
@@ -35,7 +35,7 @@ public class ScrapingWorker(
             }
         }
 
-        _logger.LogInformation("ScrapingWorker foi finalizado - {Datahora}", Now);
+        _logger.LogInformation("ScrapingWorker foi finalizado.");
     }
 
     private void RunJobs(CancellationToken stoppingToken)
@@ -51,9 +51,10 @@ public class ScrapingWorker(
     {
         _ = Task.Run(async () =>
         {
+            Thread.CurrentThread.Name = job.Name;
             try
             {
-                _logger.LogInformation("Executando job {Nome} às {Hora}", job.Name, Now);
+                _logger.LogInformation("Executando job {Nome}", job.Name);
                 await job.ExecutarAsync(stoppingToken);
             }
             catch (Exception ex)

@@ -40,11 +40,11 @@ public abstract class WebScrapingService
         CurrentUri = uriBuilder.Uri;
     }
 
-    protected async Task<string> GetContentAsync()
+    protected async Task<HttpResponseMessage> GetContentAsync()
     {
         var response = await HttpClient.GetAsync(CurrentUri.PathAndQuery);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStringAsync();
+        return response;
     }
 
     protected void ResetPagination()

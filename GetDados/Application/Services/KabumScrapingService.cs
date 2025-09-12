@@ -23,11 +23,6 @@ public class KabumScrapingService(HttpClient httpClient)
 
     public async Task ExecutarAsync(CancellationToken cancellationToken)
     {
-        await Executar();
-    }
-
-    public async Task<List<KabumDTO>> Executar()
-    {
         var kabumDto = new List<KabumDTO>();
 
         while (true)
@@ -41,8 +36,6 @@ public class KabumScrapingService(HttpClient httpClient)
 
             NextPage("page_number");
         }
-
-        return kabumDto;
     }
 
     private async Task<List<KabumDTO>> GetProducts()
@@ -89,16 +82,9 @@ public class KabumScrapingService(HttpClient httpClient)
 
     private async Task<JsonElement> GetJsonElement()
     {
+        var response = await GetContentAsync();
 
-        var teste = await GetContentAsync();
-
-        // Faz a request que retorna um HTML
-        var request = new HttpRequestMessage(HttpMethod.Get, "");
-        request.Headers.Add("Cookie", "isMobile=false; isMobileDevice=false; storeCode=001");
-        var response = await HttpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
         var html = await response.Content.ReadAsStringAsync();
-
 
         // carregar HTML
         var doc = new HtmlDocument();
@@ -109,14 +95,12 @@ public class KabumScrapingService(HttpClient httpClient)
             throw new Exception("Script __NEXT_DATA__ não encontrado.");
         var json = scriptNode.InnerText;
 
-
         // Navega no JSON até chegar na parte string
         using var docJson = JsonDocument.Parse(json);
         var root = docJson.RootElement;
         root.TryGetProperty("props", out var props);
         props.TryGetProperty("pageProps", out var pageProps);
         pageProps.TryGetProperty("data", out var data);
-
 
         // Transforma o string em um JsonDocument
         var jsonPretty = JsonSerializer.Serialize(data, options);
